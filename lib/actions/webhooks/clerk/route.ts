@@ -1,11 +1,14 @@
-import { Webhook } from "svix";
-import { headers } from "next/headers";
+/* eslint-disable camelcase */
+
 import { clerkClient, WebhookEvent } from "@clerk/nextjs/server";
-import { createUser, deleteUser } from "@/lib/actions/user.actions";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { Webhook } from "svix";
+
+import { createUser, deleteUser } from "@/lib/actions/user.actions";
 
 export async function POST(req: Request) {
-  // You can find this in the Clerk Dashboard -> Webhooks -> choose the endpoint
+  // You can find this in the Clerk Dashboard -> Webhooks -> choose the webhook
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
@@ -50,25 +53,24 @@ export async function POST(req: Request) {
     });
   }
 
-  // Do something with the payload
-
-  // For this guide, you simply log the payload to the console
+  // Get the ID and type
   const { id } = evt.data;
   const eventType = evt.type;
 
-  //   CREATE
+  // CREATE
   if (eventType === "user.created") {
     const { id, image_url, first_name, last_name } = evt.data;
 
     const user = {
-      clerkId: id,
-      firstName: first_name,
-      lastName: last_name,
+      clerkId: id!,
+      firstName: first_name!,
+      lastName: last_name!,
       photo: image_url,
     };
 
     const newUser = await createUser(user);
 
+    // Set public metadata
     if (newUser) {
       await clerkClient.users.updateUserMetadata(id, {
         publicMetadata: {
@@ -80,10 +82,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: "OK", user: newUser });
   }
 
-  // Delete
-  if (evt.type === "user.deleted") {
+
+  // DELETE
+  if (eventType === "user.deleted") {
     const { id } = evt.data;
+
     const deletedUser = await deleteUser(id!);
+
     return NextResponse.json({ message: "OK", user: deletedUser });
   }
 
